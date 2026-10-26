@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="en" class="dark h-full" data-theme="spiderman">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <!-- iOS PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GymTracker Pro">
+    <meta name="theme-color" content="#0B0E14">
+    <meta name="format-detection" content="telephone=no">
+
+    <title>GymTracker Pro - iOS PWA</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        ios: {
+                            bg: 'var(--bg-color)',
+                            card: 'var(--card-color)',
+                            cardLight: 'var(--card-light-color)',
+                            border: 'var(--border-color)',
+                            accent: 'var(--accent-color)',
+                            blue: 'var(--blue-color)',
+                            red: 'var(--red-color)',
+                            orange: 'var(--orange-color)',
+                            gray: '#8E8E93'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', 'San Francisco', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Lucide Icons & Chart.js -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* Base / Default Spider-Man Theme Variables */
+        :root, html[data-theme="spiderman"] {
+            --bg-color: #0B0E14;
+            --card-color: #151B26;
+            --card-light-color: #1F2937;
+            --border-color: #374151;
+            --accent-color: #FF2A54; /* Web Red */
+            --blue-color: #00E5FF; /* Bio-Electric Neon Blue */
+            --red-color: #FF2A54;
+            --orange-color: #FFE600; /* Venom Blast Yellow */
+            --theme-pattern: radial-gradient(circle at 50% 50%, rgba(255, 42, 84, 0.08) 0%, transparent 70%);
+        }
+
+        /* Batman Theme Variables */
+        html[data-theme="batman"] {
+            --bg-color: #0A0C10;
+            --card-color: #12161F;
+            --card-light-color: #1A202C;
+            --border-color: #2D3748;
+            --accent-color: #F5C518; /* Gotham Yellow */
+            --blue-color: #4A5568;
+            --red-color: #E53E3E;
+            --orange-color: #DD6B20;
+            --theme-pattern: radial-gradient(#1a202c 1px, transparent 1px);
+        }
+
+        /* Apple Theme Variables */
+        html[data-theme="apple"] {
+            --bg-color: #000000;
+            --card-color: #1C1C1E;
+            --card-light-color: #2C2C2E;
+            --border-color: #38383A;
+            --accent-color: #30D158; /* Activity Green */
+            --blue-color: #0A84FF;
+            --red-color: #FF453A;
+            --orange-color: #FF9F0A;
+            --theme-pattern: none;
+        }
+
+        .ios-blur {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        
+        body {
+            overscroll-behavior-y: none;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+            background-color: var(--bg-color);
+            background-image: var(--theme-pattern);
+            background-size: 24px 24px;
+            transition: background-color 0.3s ease;
+        }
+
+        .bg-ios-bg { background-color: var(--bg-color); }
+        .bg-ios-card { background-color: var(--card-color); }
+        .bg-ios-cardLight { background-color: var(--card-light-color); }
+        .border-ios-border { border-color: var(--border-color); }
+        .text-ios-accent { color: var(--accent-color); }
+        .bg-ios-accent { background-color: var(--accent-color); }
+        .text-ios-blue { color: var(--blue-color); }
+        .bg-ios-blue { background-color: var(--blue-color); }
+
+        .pb-safe {
+            padding-bottom: env(safe-area-inset-bottom, 20px);
+        }
+        .pt-safe {
+            padding-top: env(safe-area-inset-top, 20px);
+        }
+
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.15s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        .cal-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border-radius: 0.75rem;
+            position: relative;
+        }
+        .cal-day.has-workout::after {
+            content: '';
+            position: absolute;
+            bottom: 3px;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background-color: var(--accent-color);
+        }
+    </style>
+</head>
+<body class="bg-ios-bg text-white font-sans antialiased h-full flex flex-col justify-between overflow-hidden select-none">
+
+    <!-- TOP HEADER -->
+    <header class="pt-safe sticky top-0 z-30 bg-ios-bg/80 ios-blur border-b border-ios-border/40 px-5 py-3 flex justify-between items-center">
+        <div>
+            <h1 class="text-xs font-semibold text-ios-gray uppercase tracking-wider" id="header-subtitle">Gym Workout</h1>
+            <h2 class="text-2xl font-bold tracking-tight" id="header-title">Log Today</h2>
+        </div>
+        <div class="flex items-center space-x-2">
+            <!-- Theme Selector -->
+            <select id="theme-selector-header" onchange="setTheme(this.value)" class="bg-ios-card text-xs font-bold text-ios-accent px-2.5 py-1.5 rounded-xl border border-ios-border focus:outline-none">
+                <option value="spiderman" selected>🕷️ Spider-Man</option>
+                <option value="batman">🦇 Batman</option>
+                <option value="apple">🍏 Apple</option>
+            </select>
+
+            <!-- Rest Timer Badge -->
+            <button onclick="toggleRestTimerModal()" id="timer-badge" class="hidden flex items-center space-x-1.5 bg-ios-orange/20 text-ios-orange px-3 py-1.5 rounded-full text-xs font-semibold animate-pulse border border-ios-orange/30">
+                <i data-lucide="timer" class="w-3.5 h-3.5"></i>
+                <span id="timer-badge-time">00:00</span>
+            </button>
+            
+            <button onclick="switchTab('settings')" class="w-9 h-9 rounded-full bg-ios-card flex items-center justify-center text-ios-gray active:scale-95 transition border border-ios-border/40">
+                <i data-lucide="sliders" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN SCROLLABLE CONTENT AREA -->
+    <main class="flex-1 overflow-y-auto px-4 py-4 space-y-5 pb-28">
+
+        <!-- TAB 1: WORKOUT LOG -->
+        <section id="tab-workout" class="tab-content active space-y-4">
+            
+            <div class="bg-ios-card rounded-2xl p-4 border border-ios-border/50 space-y-3 shadow-lg">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <span class="text-[10px] font-bold text-ios-accent uppercase tracking-wider">Target Split</span>
+                        <div class="flex items-center space-x-2 mt-0.5">
+                            <select id="split-selector" onchange="changeWorkoutSplit(this.value)" class="bg-ios-cardLight text-white font-bold text-lg px-3 py-1 rounded-xl border border-ios-border focus:outline-none">
+                                <option value="Push">Push Day</option>
+                                <option value="Pull">Pull Day</option>
+                                <option value="Legs">Legs Day</option>
+                                <option value="Upper">Upper Body</option>
+                                <option value="Lower">Lower Body</option>
+                                <option value="Custom">Custom Workout</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button onclick="finishWorkout()" class="bg-ios-accent text-black font-bold text-sm px-4 py-2.5 rounded-xl active:scale-95 transition shadow-lg shadow-ios-accent/20">
+                        Finish
+                    </button>
+                </div>
+
+                <div class="flex justify-between items-center pt-2 border-t border-ios-border/40 text-xs text-ios-gray">
+                    <span class="flex items-center" id="session-clock">
+                        <i data-lucide="clock" class="w-3.5 h-3.5 mr-1 text-ios-accent"></i> Started: <span id="start-time-text" class="ml-1 text-white font-medium">Just now</span>
+                    </span>
+                    <span id="split-badge" class="bg-ios-blue/20 text-ios-blue px-2.5 py-0.5 rounded-full font-semibold uppercase text-[10px]">
+                        Push Split
+                    </span>
+                </div>
+            </div>
+
+            <!-- Exercises Container -->
+            <div id="exercise-list-container" class="space-y-4">
+                <!-- Dynamically Rendered -->
+            </div>
+
+            <div id="empty-workout-state" class="hidden text-center py-10 px-4 bg-ios-card/50 rounded-2xl border border-dashed border-ios-border">
+                <i data-lucide="dumbbell" class="w-12 h-12 text-ios-gray mx-auto mb-3 opacity-50"></i>
+                <h3 class="text-base font-semibold text-white">No exercises in this split yet</h3>
+                <p class="text-xs text-ios-gray mt-1 mb-4">Tap below to add exercises to your routine.</p>
+                <button onclick="openExerciseSelector()" class="bg-ios-blue text-white font-semibold text-sm px-5 py-2.5 rounded-xl inline-flex items-center space-x-2">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                    <span>Add First Exercise</span>
+                </button>
+            </div>
+
+            <button onclick="openExerciseSelector()" class="w-full bg-ios-cardLight hover:bg-ios-card text-ios-blue font-semibold py-3.5 px-4 rounded-2xl border border-ios-border/60 flex items-center justify-center space-x-2 active:scale-[0.98] transition">
+                <i data-lucide="plus-circle" class="w-5 h-5"></i>
+                <span>Add Exercise to <span id="add-ex-split-name">Push</span></span>
+            </button>
+        </section>
+
+        <!-- TAB 2: CALENDAR -->
+        <section id="tab-calendar" class="tab-content space-y-4">
+            <div class="bg-ios-card rounded-2xl p-4 border border-ios-border/50 space-y-3">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-base font-bold text-white flex items-center">
+                        <i data-lucide="calendar-days" class="w-4 h-4 mr-2 text-ios-accent"></i>
+                        <span id="cal-month-year">October 2026</span>
+                    </h3>
+                    <div class="flex space-x-1">
+                        <button onclick="changeCalendarMonth(-1)" class="p-1.5 bg-ios-cardLight rounded-lg text-ios-gray hover:text-white">
+                            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="changeCalendarMonth(1)" class="p-1.5 bg-ios-cardLight rounded-lg text-ios-gray hover:text-white">
+                            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-7 text-center text-[10px] font-bold text-ios-gray uppercase">
+                    <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                </div>
+
+                <div id="cal-days-grid" class="grid grid-cols-7 gap-1">
+                    <!-- JS Rendered -->
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center pt-2">
+                <h3 class="text-sm font-bold text-white flex items-center">
+                    <span>Workouts on </span>
+                    <span id="selected-date-title" class="ml-1 text-ios-accent">Today</span>
+                </h3>
+            </div>
+
+            <div id="selected-date-feed" class="space-y-3">
+                <!-- Logged entries -->
+            </div>
+        </section>
+
+        <!-- TAB 3: PROGRESS -->
+        <section id="tab-progress" class="tab-content space-y-4">
+            <div class="bg-ios-card rounded-2xl p-4 border border-ios-border/50 space-y-3">
+                <label class="text-xs font-bold text-ios-gray uppercase tracking-wider block">Select Exercise to Analyze</label>
+                <select id="progress-exercise-select" onchange="renderProgressChart()" class="w-full bg-ios-cardLight text-sm font-bold text-white p-3 rounded-xl border border-ios-border focus:outline-none">
+                </select>
+
+                <div class="flex space-x-2 pt-1">
+                    <button id="metric-1rm-btn" onclick="setChartMetric('1rm')" class="flex-1 py-1.5 rounded-lg text-xs font-bold bg-ios-accent text-black transition">Est 1RM</button>
+                    <button id="metric-maxwt-btn" onclick="setChartMetric('maxwt')" class="flex-1 py-1.5 rounded-lg text-xs font-bold bg-ios-cardLight text-ios-gray transition">Max Weight</button>
+                    <button id="metric-vol-btn" onclick="setChartMetric('volume')" class="flex-1 py-1.5 rounded-lg text-xs font-bold bg-ios-cardLight text-ios-gray transition">Total Vol</button>
+                </div>
+            </div>
+
+            <div class="bg-ios-card rounded-2xl p-4 border border-ios-border/50 space-y-2">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-ios-gray uppercase" id="chart-title">Estimated 1RM Trend</span>
+                    <span class="text-xs font-semibold text-ios-accent" id="chart-pr-badge">PR: --</span>
+                </div>
+                <div class="h-64 relative w-full">
+                    <canvas id="progressChart"></canvas>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-ios-card p-3.5 rounded-2xl border border-ios-border/50 text-center">
+                    <span class="text-[10px] font-bold text-ios-gray uppercase">All-Time Max Weight</span>
+                    <p class="text-xl font-extrabold text-ios-accent mt-0.5" id="pr-max-weight">0 <span class="unit-label text-xs">kg</span></p>
+                </div>
+                <div class="bg-ios-card p-3.5 rounded-2xl border border-ios-border/50 text-center">
+                    <span class="text-[10px] font-bold text-ios-gray uppercase">Best Est. 1RM</span>
+                    <p class="text-xl font-extrabold text-ios-blue mt-0.5" id="pr-max-1rm">0 <span class="unit-label text-xs">kg</span></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: EXERCISES LIBRARY -->
+        <section id="tab-exercises" class="tab-content space-y-4">
+            <div class="flex space-x-2">
+                <div class="relative flex-1">
+                    <i data-lucide="search" class="w-4 h-4 text-ios-gray absolute left-3 top-3"></i>
+                    <input type="text" id="exercise-search-input" onkeyup="filterExercises()" placeholder="Search exercises..." class="w-full bg-ios-card text-sm text-white pl-9 pr-4 py-2.5 rounded-xl border border-ios-border/50 focus:outline-none">
+                </div>
+                <button onclick="openCustomExerciseModal()" class="bg-ios-blue text-white px-3.5 py-2.5 rounded-xl font-semibold text-xs flex items-center space-x-1 active:scale-95">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                    <span>New</span>
+                </button>
+            </div>
+
+            <div class="flex space-x-2 overflow-x-auto pb-1 scrollbar-none">
+                <button onclick="filterByMuscle('All')" class="muscle-chip active bg-ios-accent text-black font-semibold text-xs px-3 py-1.5 rounded-full whitespace-nowrap">All</button>
+                <button onclick="filterByMuscle('Chest')" class="muscle-chip bg-ios-card text-ios-gray font-semibold text-xs px-3 py-1.5 rounded-full whitespace-nowrap border border-ios-border/40">Chest</button>
+                <button onclick="filterByMuscle('Back')" class="muscle-chip bg-ios-card text-ios-gray font-semibold text-xs px-3 py-1.5 rounded-full whitespace-nowrap border border-ios-border/40">Back</button>
+                <button onclick="filterByMuscle('Legs')" class="muscle-chip bg-ios-card text-ios-gray font-semibold text-xs px-3 py-1.5 rounded-full whitespace-nowrap border border-ios-border/40">Legs</button>
+                <button onclick="filterByMuscle('Shoulders')" class="muscle-chip bg-ios-card text-ios-gray font-semibold text-xs px-3 py-1.5 rounded-full whitespace-nowrap border border-ios-border/40">Shoulders</button>
+                <button onclick="filterByMuscle('Arms')" class="muscle-chip bg-ios-card text-ios-gray font-semibold text-xs px-3 py-1.5 rounded-full whitespace-nowrap border border-ios-border/40">Arms</button>
+            </div>
+
+            <div id="exercise-library-container" class="space-y-2">
+            </div>
+        </section>
+
+        <!-- TAB 5: SETTINGS -->
+        <section id="tab-settings" class="tab-content space-y-4">
+            <div class="bg-ios-card rounded-2xl border border-ios-border/50 divide-y divide-ios-border/40">
+                <div class="p-4 flex justify-between items-center">
+                    <div>
+                        <h4 class="text-sm font-semibold text-white">App Theme</h4>
+                        <p class="text-xs text-ios-gray">Choose Superhero / Activity Theme</p>
+                    </div>
+                    <select id="theme-selector-settings" onchange="setTheme(this.value)" class="bg-ios-cardLight text-xs font-semibold text-ios-accent px-3 py-1.5 rounded-xl border border-ios-border/50 focus:outline-none">
+                        <option value="spiderman">🕷️ Spider-Man (Miles Morales)</option>
+                        <option value="batman">🦇 Batman (Dark Knight)</option>
+                        <option value="apple">🍏 Apple Fitness</option>
+                    </select>
+                </div>
+
+                <div class="p-4 flex justify-between items-center">
+                    <div>
+                        <h4 class="text-sm font-semibold text-white">Weight Units</h4>
+                        <p class="text-xs text-ios-gray">Select Kilograms or Pounds</p>
+                    </div>
+                    <div class="bg-ios-cardLight p-1 rounded-xl flex border border-ios-border/50">
+                        <button id="unit-kg-btn" onclick="setWeightUnit('kg')" class="px-3 py-1 rounded-lg text-xs font-bold transition">kg</button>
+                        <button id="unit-lbs-btn" onclick="setWeightUnit('lbs')" class="px-3 py-1 rounded-lg text-xs font-bold transition">lbs</button>
+                    </div>
+                </div>
+
+                <div class="p-4 flex justify-between items-center">
+                    <div>
+                        <h4 class="text-sm font-semibold text-white">Default Rest Timer</h4>
+                        <p class="text-xs text-ios-gray">Auto-start timer on set completion</p>
+                    </div>
+                    <select id="default-timer-select" onchange="updateDefaultTimer(this.value)" class="bg-ios-cardLight text-xs font-semibold text-ios-blue px-3 py-1.5 rounded-xl border border-ios-border/50 focus:outline-none">
+                        <option value="60">60s</option>
+                        <option value="90" selected>90s</option>
+                        <option value="120">2 min</option>
+                        <option value="180">3 min</option>
+                        <option value="0">Off</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="bg-ios-card rounded-2xl border border-ios-border/50 divide-y divide-ios-border/40">
+                <button onclick="exportUserData()" class="w-full p-4 flex justify-between items-center text-left hover:bg-ios-cardLight/50 transition">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 rounded-xl bg-ios-blue/20 text-ios-blue">
+                            <i data-lucide="download" class="w-4 h-4"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-semibold text-white">Export Workout Data</h4>
+                            <p class="text-xs text-ios-gray">Backup JSON format</p>
+                        </div>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-ios-gray"></i>
+                </button>
+
+                <label class="w-full p-4 flex justify-between items-center text-left hover:bg-ios-cardLight/50 transition cursor-pointer">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 rounded-xl bg-ios-orange/20 text-ios-orange">
+                            <i data-lucide="upload" class="w-4 h-4"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-semibold text-white">Import Backup Data</h4>
+                            <p class="text-xs text-ios-gray">Restore JSON backup file</p>
+                        </div>
+                    </div>
+                    <input type="file" id="import-file-input" onchange="importUserData(event)" accept=".json" class="hidden">
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-ios-gray"></i>
+                </label>
+
+                <button onclick="clearAllData()" class="w-full p-4 flex justify-between items-center text-left hover:bg-ios-cardLight/50 transition">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 rounded-xl bg-ios-red/20 text-ios-red">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-semibold text-ios-red">Clear All Data</h4>
+                            <p class="text-xs text-ios-gray">Reset state</p>
+                        </div>
+                    </div>
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FLOATING REST TIMER CONTROLLER -->
+    <div id="sticky-timer-bar" class="hidden fixed bottom-20 left-4 right-4 z-40 bg-ios-card/90 ios-blur border border-ios-orange/40 rounded-2xl p-3 shadow-2xl flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-ios-orange/20 text-ios-orange flex items-center justify-center font-bold text-sm">
+                <i data-lucide="timer" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <span class="text-[10px] text-ios-gray uppercase font-bold tracking-wider">Rest Timer</span>
+                <p id="sticky-timer-display" class="text-xl font-mono font-bold text-white leading-none mt-0.5">01:30</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-2">
+            <button onclick="addTimerTime(30)" class="px-2.5 py-1.5 bg-ios-cardLight text-white rounded-lg text-xs font-semibold active:scale-95">+30s</button>
+            <button onclick="stopRestTimer()" class="p-2 bg-ios-red/20 text-ios-red rounded-lg active:scale-95">
+                <i data-lucide="square" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- BOTTOM NAVIGATION BAR -->
+    <nav class="fixed bottom-0 left-0 right-0 z-50 bg-black/85 ios-blur border-t border-ios-border/40 pb-safe pt-2 px-4 flex justify-around items-center">
+        <button onclick="switchTab('workout')" id="nav-workout" class="flex flex-col items-center space-y-1 text-ios-accent transition">
+            <i data-lucide="dumbbell" class="w-6 h-6"></i>
+            <span class="text-[10px] font-medium">Log</span>
+        </button>
+
+        <button onclick="switchTab('calendar')" id="nav-calendar" class="flex flex-col items-center space-y-1 text-ios-gray transition">
+            <i data-lucide="calendar" class="w-6 h-6"></i>
+            <span class="text-[10px] font-medium">Calendar</span>
+        </button>
+
+        <button onclick="switchTab('progress')" id="nav-progress" class="flex flex-col items-center space-y-1 text-ios-gray transition">
+            <i data-lucide="trending-up" class="w-6 h-6"></i>
+            <span class="text-[10px] font-medium">Progress</span>
+        </button>
+
+        <button onclick="switchTab('exercises')" id="nav-exercises" class="flex flex-col items-center space-y-1 text-ios-gray transition">
+            <i data-lucide="list" class="w-6 h-6"></i>
+            <span class="text-[10px] font-medium">Library</span>
+        </button>
+
+        <button onclick="switchTab('settings')" id="nav-settings" class="flex flex-col items-center space-y-1 text-ios-gray transition">
+            <i data-lucide="sliders" class="w-6 h-6"></i>
+            <span class="text-[10px] font-medium">Settings</span>
+        </button>
+    </nav>
+
+    <!-- MODAL 1: EXERCISE SELECTOR MODAL -->
+    <div id="exercise-selector-modal" class="fixed inset-0 z-50 bg-black/80 ios-blur hidden flex flex-col justify-end">
+        <div class="bg-ios-card rounded-t-3xl border-t border-ios-border max-h-[85vh] flex flex-col p-5 space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold text-white">Add Exercise to <span id="modal-split-title" class="text-ios-accent">Push</span></h3>
+                <button onclick="closeExerciseSelector()" class="p-1 rounded-full bg-ios-cardLight text-ios-gray">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="relative">
+                <i data-lucide="search" class="w-4 h-4 text-ios-gray absolute left-3 top-3"></i>
+                <input type="text" id="modal-search-input" onkeyup="filterModalExercises()" placeholder="Search exercises..." class="w-full bg-ios-cardLight text-sm text-white pl-9 pr-4 py-2.5 rounded-xl border border-ios-border/50 focus:outline-none">
+            </div>
+
+            <div id="modal-exercise-list" class="flex-1 overflow-y-auto space-y-2 pr-1 max-h-[50vh]">
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: CUSTOM EXERCISE MODAL -->
+    <div id="custom-exercise-modal" class="fixed inset-0 z-50 bg-black/80 ios-blur hidden flex items-center justify-center p-4">
+        <div class="bg-ios-card rounded-3xl border border-ios-border w-full max-w-sm p-5 space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-base font-bold text-white">New Exercise</h3>
+                <button onclick="closeCustomExerciseModal()" class="p-1 text-ios-gray">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs font-semibold text-ios-gray block mb-1">Exercise Name</label>
+                    <input type="text" id="custom-ex-name" placeholder="e.g. Incline Cable Fly" class="w-full bg-ios-cardLight text-sm text-white px-3.5 py-2.5 rounded-xl border border-ios-border/50 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="text-xs font-semibold text-ios-gray block mb-1">Target Muscle Group</label>
+                    <select id="custom-ex-muscle" class="w-full bg-ios-cardLight text-sm text-white px-3.5 py-2.5 rounded-xl border border-ios-border/50 focus:outline-none">
+                        <option value="Chest">Chest</option>
+                        <option value="Back">Back</option>
+                        <option value="Legs">Legs</option>
+                        <option value="Shoulders">Shoulders</option>
+                        <option value="Arms">Arms</option>
+                        <option value="Core">Core</option>
+                    </select>
+                </div>
+            </div>
+
+            <button onclick="saveCustomExercise()" class="w-full bg-ios-blue text-white font-bold py-3 rounded-xl active:scale-95 transition">
+                Create Exercise
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL 3: ALERT MODAL -->
+    <div id="app-alert-modal" class="fixed inset-0 z-50 bg-black/70 ios-blur hidden flex items-center justify-center p-6">
+        <div class="bg-ios-card border border-ios-border rounded-2xl p-5 max-w-xs w-full text-center space-y-3">
+            <h4 id="alert-modal-title" class="text-base font-bold text-white">Notice</h4>
+            <p id="alert-modal-msg" class="text-xs text-ios-gray">Message content here.</p>
+            <button onclick="closeAppAlert()" class="w-full bg-ios-blue text-white font-semibold py-2.5 rounded-xl text-sm">
+                OK
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL 4: CONFIRMATION MODAL -->
+    <div id="app-confirm-modal" class="fixed inset-0 z-50 bg-black/70 ios-blur hidden flex items-center justify-center p-6">
+        <div class="bg-ios-card border border-ios-border rounded-2xl p-5 max-w-xs w-full text-center space-y-4">
+            <h4 id="confirm-modal-title" class="text-base font-bold text-white">Confirm Action</h4>
+            <p id="confirm-modal-msg" class="text-xs text-ios-gray">Are you sure you want to proceed?</p>
+            <div class="flex space-x-2">
+                <button onclick="closeAppConfirm(false)" class="flex-1 bg-ios-cardLight text-ios-gray font-semibold py-2.5 rounded-xl text-xs border border-ios-border/50">
+                    Cancel
+                </button>
+                <button id="confirm-modal-action-btn" onclick="closeAppConfirm(true)" class="flex-1 bg-ios-red text-white font-semibold py-2.5 rounded-xl text-xs">
+                    Reset
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT APPLICATION CODE -->
+    <script>
+        const DEFAULT_EXERCISES = [
+            { id: 'ex_1', name: 'Bench Press', muscle: 'Chest', defaultSplit: 'Push' },
+            { id: 'ex_2', name: 'Incline Dumbbell Press', muscle: 'Chest', defaultSplit: 'Push' },
+            { id: 'ex_3', name: 'Overhead Shoulder Press', muscle: 'Shoulders', defaultSplit: 'Push' },
+            { id: 'ex_4', name: 'Tricep Pushdown', muscle: 'Arms', defaultSplit: 'Push' },
+            
+            { id: 'ex_5', name: 'Barbell Deadlift', muscle: 'Back', defaultSplit: 'Pull' },
+            { id: 'ex_6', name: 'Lat Pulldown', muscle: 'Back', defaultSplit: 'Pull' },
+            { id: 'ex_7', name: 'Seated Cable Row', muscle: 'Back', defaultSplit: 'Pull' },
+            { id: 'ex_8', name: 'Barbell Bicep Curl', muscle: 'Arms', defaultSplit: 'Pull' },
+
+            { id: 'ex_9', name: 'Barbell Squat', muscle: 'Legs', defaultSplit: 'Legs' },
+            { id: 'ex_10', name: 'Leg Press', muscle: 'Legs', defaultSplit: 'Legs' },
+            { id: 'ex_11', name: 'Romanian Deadlift', muscle: 'Legs', defaultSplit: 'Legs' },
+            { id: 'ex_12', name: 'Standing Calf Raise', muscle: 'Legs', defaultSplit: 'Legs' }
+        ];
+
+        let appState = {
+            theme: 'spiderman',
+            weightUnit: 'kg',
+            defaultRestTimer: 90,
+            activeSplit: 'Push',
+            exercises: [],
+            splitRoutines: {
+                Push: ['ex_1', 'ex_2', 'ex_3', 'ex_4'],
+                Pull: ['ex_5', 'ex_6', 'ex_7', 'ex_8'],
+                Legs: ['ex_9', 'ex_10', 'ex_11', 'ex_12'],
+                Upper: ['ex_1', 'ex_6', 'ex_3', 'ex_8'],
+                Lower: ['ex_9', 'ex_10', 'ex_11', 'ex_12'],
+                Custom: []
+            },
+            activeWorkout: null,
+            workoutHistory: []
+        };
+
+        let selectedCalendarDate = new Date().toISOString().slice(0, 10);
+        let calendarCurrentDisplayDate = new Date();
+        let chartInstance = null;
+        let activeChartMetric = '1rm';
+
+        let timerInterval = null;
+        let timerSecondsRemaining = 0;
+
+        // IndexedDB Fallback Handler for Persistent iOS Storage
+        const dbName = "GymTrackerProDB";
+        let db;
+
+        function initIndexedDB() {
+            return new Promise((resolve) => {
+                const request = indexedDB.open(dbName, 1);
+                request.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains("appState")) {
+                        db.createObjectStore("appState", { keyPath: "id" });
+                    }
+                };
+                request.onsuccess = (e) => {
+                    db = e.target.result;
+                    resolve(db);
+                };
+                request.onerror = () => resolve(null);
+            });
+        }
+
+        async function requestIOSStoragePersistence() {
+            if (navigator.storage && navigator.storage.persist) {
+                try {
+                    await navigator.storage.persist();
+                } catch (e) {
+                    console.log("Storage persistence request failed", e);
+                }
+            }
+        }
+
+        async function loadStateFromStorage() {
+            requestIOSStoragePersistence();
+            await initIndexedDB();
+
+            let loadedState = null;
+
+            // 1. Try loading from IndexedDB first (most reliable on iOS Safari)
+            if (db) {
+                try {
+                    loadedState = await new Promise((resolve) => {
+                        const tx = db.transaction("appState", "readonly");
+                        const store = tx.objectStore("appState");
+                        const getReq = store.get("gym_state");
+                        getReq.onsuccess = () => resolve(getReq.result ? getReq.result.data : null);
+                        getReq.onerror = () => resolve(null);
+                    });
+                } catch (err) {
+                    console.error("IndexedDB read error", err);
+                }
+            }
+
+            // 2. Fallback to localStorage if IndexedDB returned nothing
+            if (!loadedState) {
+                try {
+                    const saved = localStorage.getItem('gymtracker_pro_v2');
+                    if (saved) {
+                        loadedState = JSON.parse(saved);
+                    }
+                } catch (e) {
+                    console.error("Failed to load local storage", e);
+                }
+            }
+
+            if (loadedState) {
+                appState = Object.assign({}, appState, loadedState);
+            } else {
+                appState.exercises = [...DEFAULT_EXERCISES];
+            }
+
+            if (!appState.theme) appState.theme = 'spiderman';
+
+            if (!appState.splitRoutines) {
+                appState.splitRoutines = { Push: ['ex_1', 'ex_2', 'ex_3', 'ex_4'], Pull: ['ex_5', 'ex_6', 'ex_7', 'ex_8'], Legs: ['ex_9', 'ex_10', 'ex_11', 'ex_12'], Upper: ['ex_1', 'ex_6', 'ex_3', 'ex_8'], Lower: ['ex_9', 'ex_10', 'ex_11', 'ex_12'], Custom: [] };
+            }
+            if (!appState.exercises || appState.exercises.length === 0) {
+                appState.exercises = [...DEFAULT_EXERCISES];
+            }
+            if (!appState.activeWorkout) {
+                initNewWorkoutSession(appState.activeSplit || 'Push');
+            }
+
+            // Re-render UI once state is completely initialized from DB
+            setTheme(appState.theme || 'spiderman');
+            renderActiveWorkout();
+            renderCalendarTab();
+            populateProgressExerciseOptions();
+            updateUnitUI();
+        }
+
+        function saveState() {
+            // Save to standard localStorage
+            try {
+                localStorage.setItem('gymtracker_pro_v2', JSON.stringify(appState));
+            } catch (e) {
+                console.error("Failed to save to local storage", e);
+            }
+
+            // Dual-save to IndexedDB for iOS survival
+            if (db) {
+                try {
+                    const tx = db.transaction("appState", "readwrite");
+                    const store = tx.objectStore("appState");
+                    store.put({ id: "gym_state", data: appState });
+                } catch (e) {
+                    console.error("IndexedDB write error", e);
+                }
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initLucideIcons();
+            loadStateFromStorage();
+            setInterval(updateSessionClock, 10000);
+        });
+
+        function initLucideIcons() {
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            const targetTab = document.getElementById(`tab-${tabId}`);
+            if (targetTab) targetTab.classList.add('active');
+
+            const navBtns = ['workout', 'calendar', 'progress', 'exercises', 'settings'];
+            navBtns.forEach(id => {
+                const btn = document.getElementById(`nav-${id}`);
+                if (btn) {
+                    if (id === tabId) {
+                        btn.classList.remove('text-ios-gray');
+                        btn.classList.add('text-ios-accent');
+                    } else {
+                        btn.classList.remove('text-ios-accent');
+                        btn.classList.add('text-ios-gray');
+                    }
+                }
+            });
+
+            const headerTitle = document.getElementById('header-title');
+            const headerSub = document.getElementById('header-subtitle');
+            
+            if (tabId === 'workout') {
+                headerSub.innerText = "Gym Workout";
+                headerTitle.innerText = "Log Today";
+            } else if (tabId === 'calendar') {
+                headerSub.innerText = "History Log";
+                headerTitle.innerText = "Workout Calendar";
+                renderCalendarTab();
+            } else if (tabId === 'progress') {
+                headerSub.innerText = "Analytics";
+                headerTitle.innerText = "Progressive Overload";
+                populateProgressExerciseOptions();
+                renderProgressChart();
+            } else if (tabId === 'exercises') {
+                headerSub.innerText = "Library";
+                headerTitle.innerText = "Exercise Database";
+                renderExerciseLibrary();
+            } else if (tabId === 'settings') {
+                headerSub.innerText = "Preferences";
+                headerTitle.innerText = "App Settings";
+            }
+
+            initLucideIcons();
+        }
+
+        function setTheme(themeName) {
+            appState.theme = themeName;
+            document.documentElement.setAttribute('data-theme', themeName);
+            
+            const headerSelect = document.getElementById('theme-selector-header');
+            const settingsSelect = document.getElementById('theme-selector-settings');
+            if (headerSelect) headerSelect.value = themeName;
+            if (settingsSelect) settingsSelect.value = themeName;
+
+            saveState();
+            if (chartInstance) renderProgressChart();
+        }
+
+        function setWeightUnit(unit) {
+            appState.weightUnit = unit;
+            saveState();
+            updateUnitUI();
+            renderActiveWorkout();
+            if (chartInstance) renderProgressChart();
+        }
+
+        function updateUnitUI() {
+            const kgBtn = document.getElementById('unit-kg-btn');
+            const lbsBtn = document.getElementById('unit-lbs-btn');
+
+            if (appState.weightUnit === 'kg') {
+                kgBtn.className = "px-3 py-1 rounded-lg text-xs font-bold transition bg-ios-accent text-black shadow";
+                lbsBtn.className = "px-3 py-1 rounded-lg text-xs font-bold transition text-ios-gray";
+            } else {
+                lbsBtn.className = "px-3 py-1 rounded-lg text-xs font-bold transition bg-ios-accent text-black shadow";
+                kgBtn.className = "px-3 py-1 rounded-lg text-xs font-bold transition text-ios-gray";
+            }
+
+            document.querySelectorAll('.unit-label').forEach(el => el.innerText = appState.weightUnit);
+        }
+
+        function updateDefaultTimer(val) {
+            appState.defaultRestTimer = parseInt(val) || 0;
+            saveState();
+        }
+
+        function initNewWorkoutSession(splitName) {
+            appState.activeSplit = splitName;
+            const exIds = appState.splitRoutines[splitName] || [];
+            
+            const activeExList = exIds.map(id => {
+                const exObj = appState.exercises.find(e => e.id === id);
+                const prevStats = getPreviousWorkoutForExercise(id);
+                return {
+                    exerciseId: id,
+                    name: exObj ? exObj.name : 'Exercise',
+                    muscle: exObj ? exObj.muscle : '',
+                    sets: [
+                        { weight: prevStats ? prevStats.sets[0]?.weight || 20 : 20, reps: prevStats ? prevStats.sets[0]?.reps || 10 : 10, completed: false },
+                        { weight: prevStats ? prevStats.sets[0]?.weight || 20 : 20, reps: prevStats ? prevStats.sets[0]?.reps || 10 : 10, completed: false },
+                        { weight: prevStats ? prevStats.sets[0]?.weight || 20 : 20, reps: prevStats ? prevStats.sets[0]?.reps || 10 : 10, completed: false }
+                    ]
+                };
+            });
+
+            appState.activeWorkout = {
+                id: 'session_' + Date.now(),
+                split: splitName,
+                startTime: new Date().toISOString(),
+                exercises: activeExList
+            };
+            saveState();
+        }
+
+        function changeWorkoutSplit(splitName) {
+            appState.activeSplit = splitName;
+            const splitNameSpans = document.querySelectorAll('#add-ex-split-name, #split-badge');
+            splitNameSpans.forEach(el => el.innerText = `${splitName} Split`);
+            initNewWorkoutSession(splitName);
+            renderActiveWorkout();
+        }
+
+        function getPreviousWorkoutForExercise(exerciseId) {
+            for (let i = appState.workoutHistory.length - 1; i >= 0; i--) {
+                const session = appState.workoutHistory[i];
+                const matchedEx = session.exercises.find(e => e.exerciseId === exerciseId);
+                if (matchedEx && matchedEx.sets.length > 0) {
+                    return {
+                        date: new Date(session.startTime).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+                        sets: matchedEx.sets
+                    };
+                }
+            }
+            return null;
+        }
+
+        function renderActiveWorkout() {
+            const container = document.getElementById('exercise-list-container');
+            const emptyState = document.getElementById('empty-workout-state');
+            const splitSelector = document.getElementById('split-selector');
+            if (splitSelector) splitSelector.value = appState.activeSplit || 'Push';
+
+            const addExSplitName = document.getElementById('add-ex-split-name');
+            if (addExSplitName) addExSplitName.innerText = appState.activeSplit;
+
+            if (!appState.activeWorkout || appState.activeWorkout.exercises.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            container.innerHTML = appState.activeWorkout.exercises.map((ex, exIdx) => {
+                const prev = getPreviousWorkoutForExercise(ex.exerciseId);
+                let prevHtml = prev 
+                    ? `<span class="text-[11px] text-ios-accent font-medium bg-ios-accent/10 px-2 py-0.5 rounded-md">Last (${prev.date}): ${prev.sets.map(s => `${s.weight}${appState.weightUnit}×${s.reps}`).join(', ')}</span>`
+                    : `<span class="text-[11px] text-ios-gray">First time doing this exercise</span>`;
+
+                const setsRows = ex.sets.map((set, setIdx) => `
+                    <div class="grid grid-cols-12 gap-2 items-center py-1.5 border-b border-ios-border/20 ${set.completed ? 'opacity-60' : ''}">
+                        <div class="col-span-2 text-center text-xs font-bold text-ios-gray">${setIdx + 1}</div>
+                        <div class="col-span-4">
+                            <input type="number" value="${set.weight}" onchange="updateSetVal(${exIdx}, ${setIdx}, 'weight', this.value)" class="w-full bg-ios-cardLight text-center font-bold text-sm text-white py-1.5 rounded-xl border border-ios-border/50 focus:outline-none">
+                        </div>
+                        <div class="col-span-4">
+                            <input type="number" value="${set.reps}" onchange="updateSetVal(${exIdx}, ${setIdx}, 'reps', this.value)" class="w-full bg-ios-cardLight text-center font-bold text-sm text-white py-1.5 rounded-xl border border-ios-border/50 focus:outline-none">
+                        </div>
+                        <div class="col-span-2 flex justify-center">
+                            <button onclick="toggleSetComplete(${exIdx}, ${setIdx})" class="w-8 h-8 rounded-xl flex items-center justify-center transition ${set.completed ? 'bg-ios-accent text-black font-bold' : 'bg-ios-cardLight text-ios-gray hover:text-white'}">
+                                <i data-lucide="${set.completed ? 'check' : 'square'}" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+
+                return `
+                    <div class="bg-ios-card rounded-2xl p-4 border border-ios-border/50 space-y-3">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-bold text-base text-white">${ex.name}</h3>
+                                <div class="mt-0.5">${prevHtml}</div>
+                            </div>
+                            <button onclick="removeExerciseFromActive(${exIdx})" class="text-ios-gray hover:text-ios-red p-1">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+
+                        <div>
+                            <div class="grid grid-cols-12 gap-2 text-[10px] font-bold text-ios-gray uppercase text-center pb-1">
+                                <span class="col-span-2">Set</span>
+                                <span class="col-span-4">${appState.weightUnit}</span>
+                                <span class="col-span-4">Reps</span>
+                                <span class="col-span-2">Done</span>
+                            </div>
+                            ${setsRows}
+                        </div>
+
+                        <div class="flex space-x-2 pt-1">
+                            <button onclick="addSetToExercise(${exIdx})" class="flex-1 bg-ios-cardLight hover:bg-ios-card text-ios-blue text-xs font-bold py-2 rounded-xl border border-ios-border/40 flex items-center justify-center space-x-1">
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                <span>Add Set</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            initLucideIcons();
+            updateSessionClock();
+        }
+
+        function updateSetVal(exIdx, setIdx, field, val) {
+            if (appState.activeWorkout && appState.activeWorkout.exercises[exIdx]) {
+                appState.activeWorkout.exercises[exIdx].sets[setIdx][field] = parseFloat(val) || 0;
+                saveState();
+            }
+        }
+
+        function toggleSetComplete(exIdx, setIdx) {
+            const set = appState.activeWorkout.exercises[exIdx].sets[setIdx];
+            set.completed = !set.completed;
+            saveState();
+            renderActiveWorkout();
+
+            if (set.completed && appState.defaultRestTimer > 0) {
+                startRestTimer(appState.defaultRestTimer);
+            }
+        }
+
+        function addSetToExercise(exIdx) {
+            const sets = appState.activeWorkout.exercises[exIdx].sets;
+            const lastSet = sets[sets.length - 1] || { weight: 20, reps: 10 };
+            sets.push({ weight: lastSet.weight, reps: lastSet.reps, completed: false });
+            saveState();
+            renderActiveWorkout();
+        }
+
+        function removeExerciseFromActive(exIdx) {
+            appState.activeWorkout.exercises.splice(exIdx, 1);
+            saveState();
+            renderActiveWorkout();
+        }
+
+        function finishWorkout() {
+            if (!appState.activeWorkout || appState.activeWorkout.exercises.length === 0) {
+                showAppAlert("Empty Workout", "Add at least one exercise before completing.");
+                return;
+            }
+
+            const completedWorkout = {
+                ...appState.activeWorkout,
+                endTime: new Date().toISOString()
+            };
+
+            appState.workoutHistory.push(completedWorkout);
+            showAppAlert("Workout Saved!", `Great job! Your ${appState.activeSplit} workout has been recorded.`);
+            
+            initNewWorkoutSession(appState.activeSplit);
+            saveState();
+            renderActiveWorkout();
+            renderCalendarTab();
+        }
+
+        function updateSessionClock() {
+            if (!appState.activeWorkout || !appState.activeWorkout.startTime) return;
+            const startTime = new Date(appState.activeWorkout.startTime);
+            const now = new Date();
+            const diffMins = Math.floor((now - startTime) / 60000);
+            const clockEl = document.getElementById('start-time-text');
+            if (clockEl) {
+                clockEl.innerText = diffMins <= 0 ? "Just now" : `${diffMins} min ago`;
+            }
+        }
+
+        function startRestTimer(seconds) {
+            clearInterval(timerInterval);
+            timerSecondsRemaining = seconds;
+
+            const timerBadge = document.getElementById('timer-badge');
+            const stickyBar = document.getElementById('sticky-timer-bar');
+            
+            if (timerBadge) timerBadge.classList.remove('hidden');
+            if (stickyBar) stickyBar.classList.remove('hidden');
+
+            updateTimerDisplays();
+
+            timerInterval = setInterval(() => {
+                timerSecondsRemaining--;
+                if (timerSecondsRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    stopRestTimer();
+                    showAppAlert("Rest Time Up!", "Time to start your next set!");
+                } else {
+                    updateTimerDisplays();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplays() {
+            const mins = Math.floor(timerSecondsRemaining / 60);
+            const secs = timerSecondsRemaining % 60;
+            const timeStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+            const badgeText = document.getElementById('timer-badge-time');
+            const stickyText = document.getElementById('sticky-timer-display');
+            if (badgeText) badgeText.innerText = timeStr;
+            if (stickyText) stickyText.innerText = timeStr;
+        }
+
+        function addTimerTime(secs) {
+            timerSecondsRemaining += secs;
+            updateTimerDisplays();
+        }
+
+        function stopRestTimer() {
+            clearInterval(timerInterval);
+            document.getElementById('timer-badge')?.classList.add('hidden');
+            document.getElementById('sticky-timer-bar')?.classList.add('hidden');
+        }
+
+        function toggleRestTimerModal() {
+            const stickyBar = document.getElementById('sticky-timer-bar');
+            if (stickyBar) stickyBar.classList.toggle('hidden');
+        }
+
+        function renderCalendarTab() {
+            const monthYearEl = document.getElementById('cal-month-year');
+            const daysGrid = document.getElementById('cal-days-grid');
+
+            const year = calendarCurrentDisplayDate.getFullYear();
+            const month = calendarCurrentDisplayDate.getMonth();
+
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            if (monthYearEl) monthYearEl.innerText = `${monthNames[month]} ${year}`;
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            let gridHtml = '';
+
+            for (let i = 0; i < firstDay; i++) {
+                gridHtml += `<div class="cal-day opacity-0"></div>`;
+            }
+
+            const workoutDatesSet = new Set(appState.workoutHistory.map(w => new Date(w.startTime).toISOString().slice(0, 10)));
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${year}-${(month + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
+                const hasWorkout = workoutDatesSet.has(dateStr);
+                const isSelected = dateStr === selectedCalendarDate;
+
+                gridHtml += `
+                    <div onclick="selectCalendarDate('${dateStr}')" class="cal-day cursor-pointer ${hasWorkout ? 'has-workout font-bold' : 'text-ios-gray'} ${isSelected ? 'bg-ios-accent text-black font-bold' : 'hover:bg-ios-cardLight'}">
+                        ${d}
+                    </div>
+                `;
+            }
+
+            if (daysGrid) daysGrid.innerHTML = gridHtml;
+            renderSelectedDateFeed();
+        }
+
+        function changeCalendarMonth(delta) {
+            calendarCurrentDisplayDate.setMonth(calendarCurrentDisplayDate.getMonth() + delta);
+            renderCalendarTab();
+        }
+
+        function selectCalendarDate(dateStr) {
+            selectedCalendarDate = dateStr;
+            renderCalendarTab();
+        }
+
+        function renderSelectedDateFeed() {
+            const dateTitle = document.getElementById('selected-date-title');
+            const feedContainer = document.getElementById('selected-date-feed');
+
+            if (dateTitle) dateTitle.innerText = selectedCalendarDate;
+
+            const workoutsOnDate = appState.workoutHistory.filter(w => new Date(w.startTime).toISOString().slice(0, 10) === selectedCalendarDate);
+
+            if (workoutsOnDate.length === 0) {
+                feedContainer.innerHTML = `
+                    <div class="bg-ios-card p-4 rounded-2xl border border-ios-border/50 text-center text-ios-gray text-xs">
+                        No workouts logged on this date.
+                    </div>
+                `;
+                return;
+            }
+
+            feedContainer.innerHTML = workoutsOnDate.map(w => `
+                <div class="bg-ios-card rounded-2xl p-4 border border-ios-border/50 space-y-2">
+                    <div class="flex justify-between items-center border-b border-ios-border/30 pb-2">
+                        <span class="font-bold text-white text-sm">${w.split} Workout</span>
+                        <span class="text-[10px] text-ios-accent bg-ios-accent/10 px-2 py-0.5 rounded-full uppercase font-bold">${new Date(w.startTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    </div>
+                    <div class="space-y-1.5 pt-1">
+                        ${w.exercises.map(ex => `
+                            <div class="text-xs">
+                                <span class="font-semibold text-white">${ex.name}:</span>
+                                <span class="text-ios-gray ml-1">${ex.sets.map(s => `${s.weight}${appState.weightUnit}×${s.reps}`).join(', ')}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function populateProgressExerciseOptions() {
+            const select = document.getElementById('progress-exercise-select');
+            if (!select) return;
+
+            select.innerHTML = appState.exercises.map(ex => `
+                <option value="${ex.id}">${ex.name} (${ex.muscle})</option>
+            `).join('');
+        }
+
+        function setChartMetric(metric) {
+            activeChartMetric = metric;
+            const btn1rm = document.getElementById('metric-1rm-btn');
+            const btnMax = document.getElementById('metric-maxwt-btn');
+            const btnVol = document.getElementById('metric-vol-btn');
+
+            const activeClass = "flex-1 py-1.5 rounded-lg text-xs font-bold bg-ios-accent text-black transition";
+            const inactiveClass = "flex-1 py-1.5 rounded-lg text-xs font-bold bg-ios-cardLight text-ios-gray transition";
+
+            if (btn1rm) btn1rm.className = metric === '1rm' ? activeClass : inactiveClass;
+            if (btnMax) btnMax.className = metric === 'maxwt' ? activeClass : inactiveClass;
+            if (btnVol) btnVol.className = metric === 'volume' ? activeClass : inactiveClass;
+
+            renderProgressChart();
+        }
+
+        function renderProgressChart() {
+            const select = document.getElementById('progress-exercise-select');
+            if (!select) return;
+            const exerciseId = select.value || (appState.exercises[0] ? appState.exercises[0].id : null);
+            if (!exerciseId) return;
+
+            const chartData = [];
+            let maxWeightAllTime = 0;
+            let max1RMAllTime = 0;
+
+            appState.workoutHistory.forEach(session => {
+                const ex = session.exercises.find(e => e.exerciseId === exerciseId);
+                if (ex && ex.sets.length > 0) {
+                    const dateLabel = new Date(session.startTime).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                    
+                    let maxWt = 0;
+                    let best1RM = 0;
+                    let vol = 0;
+
+                    ex.sets.forEach(s => {
+                        const wt = parseFloat(s.weight) || 0;
+                        const reps = parseFloat(s.reps) || 0;
+                        const est1RM = wt * (1 + reps / 30);
+
+                        if (wt > maxWt) maxWt = wt;
+                        if (est1RM > best1RM) best1RM = est1RM;
+                        vol += wt * reps;
+                    });
+
+                    if (maxWt > maxWeightAllTime) maxWeightAllTime = maxWt;
+                    if (best1RM > max1RMAllTime) max1RMAllTime = best1RM;
+
+                    let value = best1RM;
+                    if (activeChartMetric === 'maxwt') value = maxWt;
+                    if (activeChartMetric === 'volume') value = vol;
+
+                    chartData.push({ date: dateLabel, value: Math.round(value) });
+                }
+            });
+
+            document.getElementById('pr-max-weight').innerText = `${Math.round(maxWeightAllTime)} `;
+            document.getElementById('pr-max-1rm').innerText = `${Math.round(max1RMAllTime)} `;
+            document.getElementById('chart-pr-badge').innerText = `PR: ${Math.round(max1RMAllTime)} ${appState.weightUnit}`;
+
+            const ctx = document.getElementById('progressChart')?.getContext('2d');
+            if (!ctx) return;
+
+            if (chartInstance) chartInstance.destroy();
+
+            const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-color').trim() || '#FF2A54';
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartData.map(d => d.date),
+                    datasets: [{
+                        label: activeChartMetric.toUpperCase(),
+                        data: chartData.map(d => d.value),
+                        borderColor: accentColor,
+                        backgroundColor: accentColor + '20',
+                        fill: true,
+                        tension: 0.3,
+                        borderWidth: 3,
+                        pointRadius: 4,
+                        pointBackgroundColor: accentColor
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: '#374151' }, ticks: { color: '#8E8E93', font: { size: 10 } } },
+                        y: { grid: { color: '#374151' }, ticks: { color: '#8E8E93', font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        function openExerciseSelector() {
+            document.getElementById('modal-split-title').innerText = appState.activeSplit;
+            renderModalExerciseList();
+            document.getElementById('exercise-selector-modal').classList.remove('hidden');
+        }
+
+        function closeExerciseSelector() {
+            document.getElementById('exercise-selector-modal').classList.add('hidden');
+        }
+
+        function renderModalExerciseList(filterText = '') {
+            const container = document.getElementById('modal-exercise-list');
+            const filtered = appState.exercises.filter(ex => ex.name.toLowerCase().includes(filterText.toLowerCase()));
+
+            container.innerHTML = filtered.map(ex => `
+                <div onclick="addExerciseToActiveSession('${ex.id}')" class="p-3 bg-ios-cardLight hover:bg-ios-card rounded-xl flex justify-between items-center cursor-pointer border border-ios-border/30">
+                    <div>
+                        <h4 class="text-sm font-bold text-white">${ex.name}</h4>
+                        <span class="text-[10px] text-ios-gray uppercase">${ex.muscle}</span>
+                    </div>
+                    <i data-lucide="plus-circle" class="w-5 h-5 text-ios-blue"></i>
+                </div>
+            `).join('');
+
+            initLucideIcons();
+        }
+
+        function filterModalExercises() {
+            const val = document.getElementById('modal-search-input').value;
+            renderModalExerciseList(val);
+        }
+
+        function addExerciseToActiveSession(exerciseId) {
+            const exObj = appState.exercises.find(e => e.id === exerciseId);
+            if (!exObj) return;
+
+            const prevStats = getPreviousWorkoutForExercise(exerciseId);
+
+            appState.activeWorkout.exercises.push({
+                exerciseId: exerciseId,
+                name: exObj.name,
+                muscle: exObj.muscle,
+                sets: [
+                    { weight: prevStats ? prevStats.sets[0]?.weight || 20 : 20, reps: prevStats ? prevStats.sets[0]?.reps || 10 : 10, completed: false },
+                    { weight: prevStats ? prevStats.sets[0]?.weight || 20 : 20, reps: prevStats ? prevStats.sets[0]?.reps || 10 : 10, completed: false },
+                    { weight: prevStats ? prevStats.sets[0]?.weight || 20 : 20, reps: prevStats ? prevStats.sets[0]?.reps || 10 : 10, completed: false }
+                ]
+            });
+
+            saveState();
+            closeExerciseSelector();
+            renderActiveWorkout();
+        }
+
+        function renderExerciseLibrary(muscleFilter = 'All', searchFilter = '') {
+            const container = document.getElementById('exercise-library-container');
+            if (!container) return;
+
+            let list = appState.exercises;
+            if (muscleFilter !== 'All') {
+                list = list.filter(e => e.muscle === muscleFilter);
+            }
+            if (searchFilter) {
+                list = list.filter(e => e.name.toLowerCase().includes(searchFilter.toLowerCase()));
+            }
+
+            container.innerHTML = list.map(ex => `
+                <div class="bg-ios-card p-3 rounded-2xl border border-ios-border/50 flex justify-between items-center">
+                    <div>
+                        <h4 class="text-sm font-bold text-white">${ex.name}</h4>
+                        <span class="text-[10px] text-ios-accent uppercase font-semibold">${ex.muscle}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterByMuscle(muscle) {
+            document.querySelectorAll('.muscle-chip').forEach(btn => {
+                btn.className = "muscle-chip bg-ios-card text-ios-gray font-semibold text-xs px-3 py-1.5 rounded-full whitespace-nowrap border border-ios-border/40";
+            });
+            event.target.className = "muscle-chip active bg-ios-accent text-black font-semibold text-xs px-3 py-1.5 rounded-full whitespace-nowrap";
+            renderExerciseLibrary(muscle, document.getElementById('exercise-search-input')?.value || '');
+        }
+
+        function filterExercises() {
+            const inputVal = document.getElementById('exercise-search-input').value;
+            renderExerciseLibrary('All', inputVal);
+        }
+
+        function openCustomExerciseModal() {
+            document.getElementById('custom-exercise-modal').classList.remove('hidden');
+        }
+
+        function closeCustomExerciseModal() {
+            document.getElementById('custom-exercise-modal').classList.add('hidden');
+        }
+
+        function saveCustomExercise() {
+            const name = document.getElementById('custom-ex-name').value;
+            const muscle = document.getElementById('custom-ex-muscle').value;
+
+            if (!name) return;
+
+            const newEx = {
+                id: 'ex_custom_' + Date.now(),
+                name: name,
+                muscle: muscle,
+                defaultSplit: appState.activeSplit
+            };
+
+            appState.exercises.push(newEx);
+            saveState();
+            closeCustomExerciseModal();
+            renderExerciseLibrary();
+            populateProgressExerciseOptions();
+            showAppAlert("Exercise Created", `${name} added to library!`);
+        }
+
+        function exportUserData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `GymTracker_Pro_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importUserData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed && parsed.exercises) {
+                        appState = parsed;
+                        saveState();
+                        renderActiveWorkout();
+                        renderCalendarTab();
+                        populateProgressExerciseOptions();
+                        renderProgressChart();
+                        updateUnitUI();
+                        showAppAlert('Import Success', 'Your data and routines were restored!');
+                    } else {
+                        showAppAlert('Invalid Format', 'File is not a valid backup.');
+                    }
+                } catch (err) {
+                    showAppAlert('Error', 'Failed to parse JSON file.');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function clearAllData() {
+            showAppConfirm(
+                "Reset All Data?",
+                "Are you sure you want to reset all workouts, calendar logs, and progress charts? This cannot be undone.",
+                function() {
+                    localStorage.removeItem('gymtracker_pro_v2');
+                    location.reload();
+                }
+            );
+        }
+
+        let pendingConfirmCallback = null;
+
+        function showAppConfirm(title, msg, callback) {
+            document.getElementById('confirm-modal-title').innerText = title;
+            document.getElementById('confirm-modal-msg').innerText = msg;
+            pendingConfirmCallback = callback;
+            document.getElementById('app-confirm-modal').classList.remove('hidden');
+        }
+
+        function closeAppConfirm(confirmed) {
+            document.getElementById('app-confirm-modal').classList.add('hidden');
+            if (confirmed && typeof pendingConfirmCallback === 'function') {
+                pendingConfirmCallback();
+            }
+            pendingConfirmCallback = null;
+        }
+
+        function showAppAlert(title, msg) {
+            document.getElementById('alert-modal-title').innerText = title;
+            document.getElementById('alert-modal-msg').innerText = msg;
+            document.getElementById('app-alert-modal').classList.remove('hidden');
+        }
+
+        function closeAppAlert() {
+            document.getElementById('app-alert-modal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
